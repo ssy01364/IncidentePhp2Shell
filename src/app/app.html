@@ -1,0 +1,336 @@
+<header class="cabecera">
+  <h1>PHP2Shell</h1>
+  <p>CVE-2026-109618 y CVE-2026-109619 · Ejecución remota de código en PHP</p>
+</header>
+
+<nav class="menu">
+  @for (s of secciones; track s.id) {
+    <a [href]="'#' + s.id">{{ s.titulo }}</a>
+  }
+</nav>
+
+<main>
+  <section id="resumen">
+    <h2>Resumen</h2>
+    <p>
+      <strong>PHP2Shell</strong> es el nombre con el que los investigadores bautizaron dos
+      vulnerabilidades críticas del propio lenguaje PHP (no de una aplicación concreta).
+      Permiten que un atacante ejecute código en el servidor <strong>sin necesidad de
+      iniciar sesión</strong> y sin que nadie haga clic en nada. Ambas tienen una
+      puntuación CVSS de 9,2 sobre 10.
+    </p>
+
+    <div class="aviso">
+      Como el fallo está en PHP, afecta por igual a WordPress, Laravel o a un simple
+      <code>index.php</code>. Si tu servidor ejecuta PHP, hay que revisarlo.
+    </div>
+
+    <h3>Cronología</h3>
+    <ul class="cronologia">
+      <li><span>1 ago 2026</span> Los investigadores (Wiz, Calif y OpenAI) descubren los fallos.</li>
+      <li><span>21 sep 2026</span> El equipo de seguridad de PHP acepta los informes y empieza a preparar los parches.</li>
+      <li><span>20 oct 2026</span> Se filtran detalles en foros y PHP avisa de que habrá una actualización de emergencia.</li>
+      <li><span>21 oct 2026</span> PHP publica las versiones corregidas.</li>
+      <li><span>26 oct 2026</span> CISA añade ambos fallos a su catálogo de vulnerabilidades explotadas activamente.</li>
+    </ul>
+  </section>
+
+  <section id="que-es">
+    <h2>¿Qué es?</h2>
+    <p>
+      Son dos errores de <strong>seguridad de memoria</strong>. PHP gestiona la memoria
+      del servidor mientras atiende cada petición web, y en ciertas situaciones extremas
+      (por ejemplo, cuando se queda sin memoria a mitad de una tarea) deja información
+      interna en un estado inconsistente.
+    </p>
+
+    <div class="tarjetas">
+      <article class="tarjeta">
+        <h3>CVE-2026-109618</h3>
+        <p>
+          Corrupción de memoria que se provoca cuando PHP se queda sin memoria en un
+          mal momento. El atacante puede manipular lo que ocurre después y llegar a
+          ejecutar código.
+        </p>
+      </article>
+      <article class="tarjeta">
+        <h3>CVE-2026-109619</h3>
+        <p>
+          Estado interno obsoleto: una petición deja "restos" que PHP no limpia bien,
+          y la siguiente petición los usa como si fueran válidos. Eso también permite
+          ejecutar código.
+        </p>
+      </article>
+    </div>
+
+    <h3>Una analogía</h3>
+    <p>
+      Imagina un camarero que apunta los pedidos en una pizarra. Si alguien le obliga a
+      borrar la pizarra a mitad de servicio, pero él sigue fiándose de una nota antigua,
+      acabará sirviendo lo que ponga esa nota, aunque la haya escrito un cliente malintencionado.
+      En PHP, esa "nota antigua" es memoria ya liberada que el atacante consigue rellenar
+      con sus propios datos.
+    </p>
+
+    <h3>¿Por qué es tan grave?</h3>
+    <ul>
+      <li>No requiere autenticación ni interacción del usuario.</li>
+      <li>El ataque puede ocurrir antes de que se ejecute el código de la aplicación.</li>
+      <li>Una de las vías confirmadas usa una función de PHP que está activada por defecto.</li>
+      <li>Ya se ha explotado en el mundo real.</li>
+    </ul>
+  </section>
+
+  <section id="versiones">
+    <h2>Versiones afectadas</h2>
+    <p>
+      El fallo está en el núcleo de PHP, así que afecta a cualquier instalación que
+      atienda peticiones web: PHP-FPM, Apache con <code>mod_php</code>, <code>php-cgi</code>,
+      FrankenPHP y LiteSpeed. El riesgo se considera más alto con <code>mod_php</code>.
+    </p>
+
+    <div class="tabla-scroll">
+      <table>
+        <thead>
+          <tr><th>Rama de PHP</th><th>Estado</th><th>Versión segura</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>8.5</td><td>Con soporte</td><td><span class="ok">8.5.12 o superior</span></td></tr>
+          <tr><td>8.4</td><td>Con soporte</td><td><span class="ok">8.4.27 o superior</span></td></tr>
+          <tr><td>8.3</td><td>Con soporte</td><td><span class="ok">8.3.36 o superior</span></td></tr>
+          <tr><td>8.2</td><td>Solo seguridad</td><td><span class="ok">8.2.35 o superior</span></td></tr>
+          <tr><td>8.1</td><td>Fin de vida (EOL)</td><td><span class="mal">Sin parche oficial</span></td></tr>
+          <tr><td>8.0, 7.x, 5.x</td><td>Fin de vida (EOL)</td><td><span class="mal">Sin parche oficial</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="aviso">
+      Las ramas sin soporte no recibirán parche oficial. Hay que migrar a una rama
+      soportada o, mientras tanto, aplicar las mitigaciones de la siguiente sección
+      (o usar un parche del proveedor de tu distribución).
+    </div>
+
+    <p>
+      Algunas fuentes indican que el fallo existe desde PHP 5.4 aproximadamente, por lo
+      que casi todo PHP antiguo que siga en producción está expuesto.
+    </p>
+  </section>
+
+  <section id="soluciones">
+    <h2>Soluciones</h2>
+
+    <h3>1. Actualizar PHP (la solución real)</h3>
+    <p>Es la única medida que corrige la causa. Pasos en Ubuntu/Debian:</p>
+    <pre><code>php -v
+sudo apt update
+sudo apt upgrade
+sudo systemctl restart php8.3-fpm   # cambia 8.3 por tu versión</code></pre>
+    <p>
+      Ojo: algunas distribuciones aplican el parche sin cambiar el número de versión
+      (lo "retroportan"). Si tras actualizar sigues viendo una versión anterior, revisa
+      el registro de cambios del paquete o la web de seguridad de tu distribución.
+    </p>
+
+    <h3>2. Mitigación temporal si no puedes actualizar ya</h3>
+    <p>
+      Una vía confirmada de ataque usa el seguimiento de progreso de subida de archivos
+      de las sesiones. Si tu aplicación no lo necesita, se puede desactivar:
+    </p>
+    <pre><code>; php.ini
+session.upload_progress.enabled = 0
+
+; Solo PHP 8.5
+fatal_error_backtraces = 0</code></pre>
+
+    <p>Según tu servidor web:</p>
+    <pre><code>; PHP-FPM (pool, por ejemplo www.conf)
+php_admin_flag[session.upload_progress.enabled] = off
+
+# Apache con mod_php
+php_admin_flag session.upload_progress.enabled off</code></pre>
+
+    <div class="aviso">
+      <strong>Errores habituales:</strong> esa opción no se puede cambiar con
+      <code>ini_set()</code> en el código, porque se aplica antes de que se ejecute la
+      aplicación. Tras cambiarla hay que reiniciar o recargar PHP-FPM o Apache.
+    </div>
+
+    <h3>3. Capas adicionales</h3>
+    <ul>
+      <li>Un firewall de aplicaciones web (WAF) o reglas IDS/IPS que bloqueen peticiones con el campo <code>PHP_SESSION_UPLOAD_PROGRESS</code>.</li>
+      <li>Reducir los límites de subida (<code>post_max_size</code> y <code>upload_max_filesize</code>).</li>
+      <li>No exponer al público paneles de administración que usen PHP.</li>
+    </ul>
+
+    <h3>Importante</h3>
+    <p>
+      Desactivar esa función <strong>no sustituye</strong> al parche: PHP advierte de que
+      existen otras variantes del ataque. Además, hay un fallo posterior relacionado
+      (CVE-2026-115560) que también afecta al progreso de subida de sesiones, así que
+      conviene mantener la opción desactivada y seguir al día con las actualizaciones.
+    </p>
+  </section>
+
+  <section id="twinteach">
+    <h2>Checklist Twinteach</h2>
+    <p>
+      Twinteach usa <strong>Angular</strong> en el frontend y <strong>Laravel</strong> en el
+      backend. PHP2Shell afecta a PHP, es decir, a la parte Laravel. Marca cada paso a medida
+      que lo compruebes.
+    </p>
+
+    <div class="progreso">
+      <div class="barra"><div class="relleno" [style.width.%]="porcentaje()"></div></div>
+      <p>
+        <strong>{{ hechos() }}</strong> de {{ pasos().length }} pasos completados
+        ({{ porcentaje() }}%)
+        <button type="button" class="btn" (click)="reiniciar()">Reiniciar</button>
+      </p>
+    </div>
+
+    <ol class="checklist">
+      @for (p of pasos(); track p.id; let i = $index) {
+        <li [class.hecho]="p.hecho">
+          <label>
+            <input type="checkbox" [checked]="p.hecho" (change)="alternar(i)" />
+            <span class="titulo-paso">{{ p.titulo }}</span>
+          </label>
+          <p>{{ p.detalle }}</p>
+          @if (p.comando) {
+            <pre><code>{{ p.comando }}</code></pre>
+          }
+        </li>
+      }
+    </ol>
+
+    @if (porcentaje() === 100) {
+      <div class="exito">
+        Checklist completa. Si además no has encontrado indicios de explotación, el
+        sistema puede considerarse protegido, siempre que mantengas PHP actualizado.
+      </div>
+    }
+  </section>
+
+  <section id="deteccion">
+    <h2>¿Me han atacado?</h2>
+    <p>
+      A veces sí se puede saber, pero con límites. El ataque suele hacerse con peticiones
+      web normales, y los logs de acceso habituales <strong>no guardan el cuerpo</strong> de
+      las peticiones, así que no ver nada sospechoso no demuestra que todo esté limpio. Lo
+      más fiable es buscar lo que el atacante deja <em>después</em>: procesos, archivos y
+      cambios raros.
+    </p>
+
+    <div class="tarjetas">
+      <article class="tarjeta">
+        <h3>1. Procesos sospechosos</h3>
+        <p>
+          Los workers de PHP no deberían lanzar shells ni herramientas de red. Busca procesos
+          hijos extraños de php-fpm o apache.
+        </p>
+        <pre><code>ps -eo pid,ppid,user,cmd --forest | grep -A3 -E "php-fpm|apache2"</code></pre>
+      </article>
+
+      <article class="tarjeta">
+        <h3>2. Archivos nuevos o modificados</h3>
+        <p>
+          Busca archivos PHP recientes en la web y archivos raros en carpetas temporales
+          (posibles webshells).
+        </p>
+        <pre><code>find /var/www -name "*.php" -mtime -14
+find /tmp /var/tmp -type f -mtime -14</code></pre>
+      </article>
+
+      <article class="tarjeta">
+        <h3>3. Errores y caídas en los logs</h3>
+        <p>
+          El exploit provoca errores de memoria. Revisa caídas de workers y mensajes de
+          memoria agotada alrededor del 20 y 21 de octubre y después.
+        </p>
+        <pre><code>grep -iE "segfault|SIGSEGV|memory size" /var/log/php8.3-fpm.log
+grep -i "memory" storage/logs/laravel.log</code></pre>
+      </article>
+
+      <article class="tarjeta">
+        <h3>4. Peticiones sospechosas</h3>
+        <p>
+          Muchas peticiones POST de subida de archivos a URLs inusuales, desde una misma IP,
+          o cookies PHPSESSID raras. Si tienes WAF o IDS, revisa si saltó alguna regla de
+          PHP_SESSION_UPLOAD_PROGRESS.
+        </p>
+      </article>
+
+      <article class="tarjeta">
+        <h3>5. Cambios en la aplicación</h3>
+        <p>
+          Usuarios administradores nuevos, tareas programadas desconocidas, cambios en el
+          archivo .env y conexiones salientes inesperadas del servidor.
+        </p>
+        <pre><code>crontab -l
+sudo ls -la /etc/cron.d</code></pre>
+      </article>
+    </div>
+
+    <h3>Si encuentras indicios</h3>
+    <ol>
+      <li>Aislar el servidor de la red y <strong>conservar los logs</strong> antes de tocar nada.</li>
+      <li>No limitarte a borrar el archivo sospechoso: el atacante pudo ejecutar cualquier cosa.</li>
+      <li>Rotar credenciales: contraseñas de base de datos, claves de API y <code>APP_KEY</code> (esta última invalida sesiones y datos cifrados, planifícalo).</li>
+      <li>Restaurar desde una copia limpia y actualizar PHP antes de volver a ponerlo en línea.</li>
+      <li>Avisar al responsable del sistema y, si hay datos personales afectados, valorar la notificación a la autoridad de protección de datos.</li>
+    </ol>
+  </section>
+
+  <section id="extra">
+    <h2>Otros aspectos</h2>
+
+    <h3>Un nombre que no es oficial</h3>
+    <p>
+      "PHP2Shell" (en tu enunciado, "php2bash") es un apodo que usan investigadores y
+      prensa, no el nombre que le da el proyecto PHP. El identificador oficial son los
+      dos números CVE. Conviene buscar por ellos para no perderse información.
+    </p>
+
+    <h3>Explotación real</h3>
+    <ul>
+      <li>CISA añadió ambos fallos a su catálogo KEV de vulnerabilidades explotadas activamente.</li>
+      <li>
+        Se han comprometido cortafuegos Palo Alto Networks con la interfaz de gestión
+        expuesta: un grupo vinculado a China encadenó PHP2Shell con un fallo del núcleo
+        de Linux para conseguir acceso root.
+      </li>
+      <li>
+        Una empresa de seguridad contabilizó más de 22 millones de instancias PHP expuestas
+        potencialmente vulnerables a fecha del 29 de octubre.
+      </li>
+      <li>
+        Aun así, se observaron muchos intentos y pocos éxitos confirmados: contra
+        WordPress, por ejemplo, la explotación fue en gran parte fallida. Según análisis
+        públicos, el exploit era sensible a la configuración, y esa fue una de las razones.
+      </li>
+    </ul>
+    <div class="aviso">
+      Que muchos ataques fallen <strong>no es motivo para esperar</strong>: los exploits
+      se perfeccionan rápido y una vez publicado el fallo el escaneo masivo es constante.
+    </div>
+
+    <h3>Otros fallos que no hay que confundir</h3>
+    <ul>
+      <li>
+        <strong>CVE-2026-115560:</strong> otro fallo que afecta también al progreso de
+        subida de sesiones, con un escenario poco habitual (cambiar el serializador de
+        sesión en tiempo de ejecución). Es una razón más para mantener esa opción desactivada.
+      </li>
+      <li>
+        <strong>CVE-2026-111497:</strong> un fallo distinto en la biblioteca Brotli, con
+        compilaciones de PHP para Windows corregidas el 26 de octubre.
+      </li>
+    </ul>
+
+    <h3>Lecciones aprendidas</h3>
+    <ol>
+      <li><strong>Mantener actualizado el lenguaje y el servidor,</strong> no solo el framework (Laravel, Angular…).</li>
+      <li><strong>Evitar versiones sin soporte:</strong> si una rama está en fin de vida, el próximo fallo grave no tendrá parche.</li>
+      <li><strong>Defensa en capas:</strong> WAF, mínimos privilegios, desactivar funciones que no se usan.</li>
+      <li><strong>Tener inventario:</strong> hay que saber qué versión de PHP corre cada servicio, incluidos contenedores y
